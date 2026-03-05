@@ -37,3 +37,4 @@ jobs:
         uses: Factory-AI/droid-action@feat/review-suggestion-blocks
         with:
           factory_api_key: ${{ secrets.FACTORY_API_KEY }}
+          review_model: claude-opus-4-6
