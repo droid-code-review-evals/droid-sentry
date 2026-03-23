@@ -34,6 +34,6 @@ jobs:
           fetch-depth: 1
 
       - name: Run Droid Exec
-        uses: Factory-AI/droid-action@feat/sb-v3-conditional-suggestions
+        uses: Factory-AI/droid-action@feat/sb-v3-decouple-suggestions
         with:
           factory_api_key: ${{ secrets.FACTORY_API_KEY }}
