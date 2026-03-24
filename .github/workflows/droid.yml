@@ -38,3 +38,4 @@ jobs:
         with:
           factory_api_key: ${{ secrets.FACTORY_API_KEY }}
           review_model: claude-opus-4-5-20251101
+          validator_model: gpt-5.2
