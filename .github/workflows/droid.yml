@@ -34,7 +34,6 @@ jobs:
           fetch-depth: 1
 
       - name: Run Droid Exec
-        uses: Factory-AI/droid-action@feat/deep-review
+        uses: Factory-AI/droid-action@feat/deep-review-v6
         with:
           factory_api_key: ${{ secrets.FACTORY_API_KEY }}
-          review_depth: deep
