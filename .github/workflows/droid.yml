@@ -20,7 +20,7 @@ jobs:
       (github.event_name == 'pull_request_review' && contains(github.event.review.body, '@droid')) ||
       (github.event_name == 'issues' && (contains(github.event.issue.body, '@droid') || contains(github.event.issue.title, '@droid'))) ||
       (github.event_name == 'pull_request' && (contains(github.event.pull_request.body, '@droid') || contains(github.event.pull_request.title, '@droid')))
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     permissions:
       contents: write
       pull-requests: write
@@ -34,7 +34,7 @@ jobs:
           fetch-depth: 1
 
       - name: Run Droid Exec
-        uses: Factory-AI/droid-action@main
+        uses: Factory-AI/droid-action@benchmark/v3-no-posting
         with:
           factory_api_key: ${{ secrets.FACTORY_API_KEY }}
-          review_model: "olm-03-05"
+          review_model: "minimax-m2.7"
