@@ -1,0 +1,90 @@
+name: Blacksmith Testbox
+on:
+  workflow_dispatch:
+    inputs:
+      testbox_id:
+        type: string
+        description: "Testbox session ID"
+        required: true
+  pull_request:
+    paths:
+      - '.github/workflows/**'
+
+jobs:
+  acceptance:
+    name: acceptance
+    runs-on: blacksmith-4vcpu-ubuntu-2404
+    timeout-minutes: 20
+    env:
+      VISUAL_SNAPSHOT_ENABLE: 1
+      TEST_GROUP_STRATEGY: roundrobin
+    steps:
+      - name: Begin Testbox
+        uses: useblacksmith/begin-testbox@v2
+        with:
+          testbox_id: ${{ inputs.testbox_id }}
+      - uses: actions/checkout@v2
+        name: Checkout sentry
+      - uses: volta-cli/action@v1
+      - name: Set python version output
+        id: python-version
+        run: |
+          echo "python-version=$(cat .python-version)" >> $GITHUB_OUTPUT
+      - name: Setup webpack cache
+        id: webpack-cache
+        run: echo "path=.webpack_cache" >> $GITHUB_OUTPUT
+      - uses: actions/setup-python@v2
+        with:
+          python-version: ${{ steps.python-version.outputs.python-version }}
+      - name: Setup pip
+        uses: ./.github/actions/setup-pip
+        id: pip
+      - name: pip cache
+        uses: actions/cache@v2
+        with:
+          path: ${{ steps.pip.outputs.pip-cache-dir }}
+          key: |
+            ${{ runner.os }}-py${{ steps.python-version.outputs.python-version }}-pip${{ steps.pip.outputs.pip-version }}-${{ secrets.PIP_CACHE_VERSION }}-${{ hashFiles('requirements-*.txt', '!requirements-pre-commit.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-py${{ steps.python-version.outputs.python-version }}-pip${{ steps.pip.outputs.pip-version }}-${{ secrets.PIP_CACHE_VERSION }}
+      - name: Setup sentry python env
+        uses: ./.github/actions/setup-sentry
+        id: setup
+        with:
+          snuba: true
+      - name: yarn cache
+        uses: actions/cache@v2
+        id: yarn-cache
+        with:
+          path: ${{ steps.setup.outputs.yarn-cache-dir }}
+          key: ${{ runner.os }}-yarn-${{ hashFiles('yarn.lock', 'api-docs/yarn.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-yarn-
+      - name: webpack cache
+        uses: actions/cache@v2
+        with:
+          path: ${{ steps.webpack-cache.outputs.path }}
+          key: ${{ runner.os }}-webpack-cache-${{ hashFiles('webpack.config.js') }}
+          restore-keys: |
+            ${{ runner.os }}-webpack-cache-
+      - name: Install Javascript Dependencies
+        run: |
+          yarn install --frozen-lockfile
+      - name: webpack
+        env:
+          WEBPACK_CACHE_PATH: ${{ steps.webpack-cache.outputs.path }}
+          SENTRY_INSTRUMENTATION: 1
+          SENTRY_WEBPACK_WEBHOOK_SECRET: ${{ secrets.SENTRY_WEBPACK_WEBHOOK_SECRET }}
+        run: |
+          yarn build-acceptance
+      - name: Run Testbox
+        uses: useblacksmith/run-testbox@v2
+        if: always()
+        env:
+          VISUAL_SNAPSHOT_ENABLE: 1
+          TEST_GROUP_STRATEGY: roundrobin
+          PYTEST_SNAPSHOTS_DIR: ${{ steps.setup.outputs.acceptance-dir }}
+          USE_SNUBA: 1
+          WEBPACK_CACHE_PATH: ${{ steps.webpack-cache.outputs.path }}
+          SENTRY_INSTRUMENTATION: 1
+          SENTRY_WEBPACK_WEBHOOK_SECRET: ${{ secrets.SENTRY_WEBPACK_WEBHOOK_SECRET }}
