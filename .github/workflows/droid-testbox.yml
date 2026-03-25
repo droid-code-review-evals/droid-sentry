@@ -1,0 +1,51 @@
+name: Droid Review Testbox
+on:
+  workflow_dispatch:
+    inputs:
+      testbox_id:
+        type: string
+        description: "Testbox session ID"
+        required: true
+
+jobs:
+  review:
+    name: review
+    runs-on: blacksmith-4vcpu-ubuntu-2404
+    timeout-minutes: 60
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Begin Testbox
+        uses: useblacksmith/begin-testbox@v2
+        with:
+          testbox_id: ${{ inputs.testbox_id }}
+
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Install Droid CLI
+        run: |
+          curl --retry 5 --retry-delay 2 --retry-all-errors -fsSL https://app.factory.ai/cli | sh
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+          "$HOME/.local/bin/droid" --version
+        env:
+          FACTORY_API_KEY: ${{ secrets.FACTORY_API_KEY }}
+
+      - name: Setup custom droids
+        run: |
+          mkdir -p ~/.factory/droids
+          # Clone droid-action to get file-group-reviewer
+          git clone --depth 1 --filter=blob:none --sparse \
+            https://github.com/Factory-AI/droid-action.git /tmp/droid-action 2>/dev/null || true
+          cd /tmp/droid-action && git sparse-checkout set .factory/droids 2>/dev/null || true
+          if [ -d "/tmp/droid-action/.factory/droids" ]; then
+            cp -r /tmp/droid-action/.factory/droids/* ~/.factory/droids/
+          fi
+          ls -la ~/.factory/droids/
+
+      - name: Run Testbox
+        uses: useblacksmith/run-testbox@v2
+        env:
+          FACTORY_API_KEY: ${{ secrets.FACTORY_API_KEY }}
