@@ -1,0 +1,103 @@
+name: Benchmark Review
+
+on:
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        type: number
+        description: "PR number to review"
+        required: true
+      review_model:
+        type: string
+        description: "Model to use for review"
+        default: "gpt-5.2"
+      reasoning_effort:
+        type: string
+        description: "Reasoning effort (high, medium, low)"
+        default: "high"
+
+jobs:
+  review:
+    runs-on: blacksmith-4vcpu-ubuntu-2404
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      pull-requests: read
+      id-token: write
+      actions: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Checkout PR branch
+        run: |
+          gh pr checkout ${{ inputs.pr_number }}
+          echo "HEAD_SHA=$(git rev-parse HEAD)" >> $GITHUB_ENV
+          echo "HEAD_REF=$(git rev-parse --abbrev-ref HEAD)" >> $GITHUB_ENV
+
+          # Get PR metadata
+          PR_JSON=$(gh pr view ${{ inputs.pr_number }} --json baseRefName,headRefName,headRefOid,title,body)
+          echo "BASE_REF=$(echo "$PR_JSON" | jq -r '.baseRefName')" >> $GITHUB_ENV
+          echo "PR_TITLE=$(echo "$PR_JSON" | jq -r '.title')" >> $GITHUB_ENV
+
+          # Store PR description
+          mkdir -p ${{ runner.temp }}/droid-prompts
+          echo "$PR_JSON" | jq -r '"# " + .title + "\n\n" + (.body // "")' > ${{ runner.temp }}/droid-prompts/pr_description.txt
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      - name: Compute diff
+        run: |
+          # Fetch base branch
+          git fetch origin ${{ env.BASE_REF }}:refs/remotes/origin/${{ env.BASE_REF }} 2>/dev/null || true
+          MERGE_BASE=$(git merge-base HEAD refs/remotes/origin/${{ env.BASE_REF }})
+          git --no-pager diff "$MERGE_BASE..HEAD" > ${{ runner.temp }}/droid-prompts/pr.diff
+          echo "Diff size: $(wc -c < ${{ runner.temp }}/droid-prompts/pr.diff) bytes"
+
+          # Empty existing comments (benchmark runs have no prior comments)
+          echo '{"issueComments": [], "reviewComments": []}' > ${{ runner.temp }}/droid-prompts/existing_comments.json
+
+      - name: Install Droid CLI
+        run: |
+          curl --retry 5 --retry-delay 2 --retry-all-errors -fsSL https://app.factory.ai/cli | sh
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+          "$HOME/.local/bin/droid" --version
+        env:
+          FACTORY_API_KEY: ${{ secrets.FACTORY_API_KEY }}
+
+      - name: Setup custom droids
+        run: |
+          mkdir -p ~/.factory/droids
+          if [ -d ".factory/droids" ]; then
+            cp -r .factory/droids/* ~/.factory/droids/
+            echo "Installed custom droids:"
+            ls ~/.factory/droids/
+          fi
+
+      - name: Generate prompts and run review
+        run: |
+          python3 scripts/generate_and_run_review.py \
+            --pr-number ${{ inputs.pr_number }} \
+            --repo "${{ github.repository }}" \
+            --head-sha "${{ env.HEAD_SHA }}" \
+            --head-ref "${{ env.HEAD_REF }}" \
+            --base-ref "${{ env.BASE_REF }}" \
+            --model "${{ inputs.review_model }}" \
+            --reasoning "${{ inputs.reasoning_effort }}" \
+            --prompts-dir "${{ runner.temp }}/droid-prompts"
+        env:
+          FACTORY_API_KEY: ${{ secrets.FACTORY_API_KEY }}
+
+      - name: Upload review artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: droid-review-debug-${{ github.run_id }}
+          path: |
+            ${{ runner.temp }}/droid-prompts/**
+            ~/.factory/**
+          include-hidden-files: true
+          if-no-files-found: ignore
+          retention-days: 7
