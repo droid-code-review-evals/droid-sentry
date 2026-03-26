@@ -34,7 +34,7 @@ jobs:
           fetch-depth: 1
 
       - name: Run Droid Exec
-        uses: Factory-AI/droid-action@main
+        uses: Factory-AI/droid-action@v3
         with:
           factory_api_key: ${{ secrets.FACTORY_API_KEY }}
-          review_model: "glm-4.7"
+          review_model: "claude-sonnet-4-6"
