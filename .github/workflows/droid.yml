@@ -37,4 +37,4 @@ jobs:
         uses: Factory-AI/droid-action@v3
         with:
           factory_api_key: ${{ secrets.FACTORY_API_KEY }}
-          review_model: "gpt-5.2-codex"
+          review_model: "olm-03-05"
