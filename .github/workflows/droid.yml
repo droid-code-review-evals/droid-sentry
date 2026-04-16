@@ -34,6 +34,8 @@ jobs:
           fetch-depth: 1
 
       - name: Run Droid Exec
-        uses: Factory-AI/droid-action@release/v5
+        uses: Factory-AI/droid-action@v3
         with:
           factory_api_key: ${{ secrets.FACTORY_API_KEY }}
+          review_model: "gpt-5.2"
+          reasoning_effort: "medium"
