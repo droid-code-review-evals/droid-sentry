@@ -34,6 +34,6 @@ jobs:
           fetch-depth: 1
 
       - name: Run Droid Exec
-        uses: Factory-AI/droid-action@eval/remove-file-group-reviewer
+        uses: Factory-AI/droid-action@release/v5
         with:
           factory_api_key: ${{ secrets.FACTORY_API_KEY }}
