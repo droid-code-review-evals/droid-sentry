@@ -38,4 +38,3 @@ jobs:
         with:
           factory_api_key: ${{ secrets.FACTORY_API_KEY }}
           review_model: "claude-opus-4-7"
-          review_use_validator: "false"
