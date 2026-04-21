@@ -1,26 +1,23 @@
-## Review Focus
-- Focus EXCLUSIVELY on correctness bugs, logic errors, and security issues
-- DO NOT flag performance concerns, style issues, or minor improvements
-- Only flag issues at P0 (crash/data loss) or P1 (incorrect behavior) severity
-- Skip P2 and P3 entirely
+# Review Guidelines - Enhanced Thoroughness
 
-## Depth Over Breadth
-- If a PR has complex logic changes, spend your budget going deep on those files
-- Prefer finding 3-4 high-confidence bugs on one PR over 1 comment each on 5 PRs
-- Every finding must have a concrete, specific trigger path -- no "might" or "could"
+## Critical Instructions
 
-## What Counts as a Real Bug
-- Null/undefined dereferences with a reachable code path
-- Logic errors that produce wrong results (wrong condition, off-by-one, missing case)
-- Security vulnerabilities (injection, auth bypass, CSRF, XSS)
-- Resource leaks or missing cleanup
-- Race conditions or concurrency bugs
-- API contract violations (wrong return type, missing error handling)
-- Data corruption or loss scenarios
+1. **Review EVERY file individually.** Do not skip files even if they appear to be simple renames, test-only changes, or boilerplate. Bugs hide in seemingly innocent changes.
 
-## What to SKIP
-- Performance suggestions (caching, query optimization, etc.)
-- Code style or readability improvements
-- Missing tests or test improvements
-- Documentation issues
-- Suggestions that start with "consider" or "you might want to"
+2. **Check each function/method modified in the diff.** For each one:
+   - What are the implicit assumptions about input types and values?
+   - What happens on edge cases (null, empty, zero, negative, boundary values)?
+   - Does the function correctly handle all error paths?
+   - Are return values used correctly by callers?
+
+3. **Cross-reference related changes.** When a type, interface, or function signature changes in one file, check ALL callers/implementers in the diff for mismatches.
+
+4. **Be especially vigilant for:**
+   - Variables evaluated at definition time vs runtime (class-level defaults, module-level expressions)
+   - Wrong variable names used (copy-paste errors, similar variable names)
+   - Boolean logic errors (AND vs OR, negation errors, always-true/false conditions)
+   - Off-by-one errors in loops, slices, and comparisons
+   - Missing null/undefined checks on optional values
+   - Cache key construction that could collide
+
+5. **Err on the side of reporting.** If you see something that looks like it could be a bug with a plausible trigger path, report it. The validator will filter out false positives. Your job is to catch bugs, not to pre-filter.
