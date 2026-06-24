@@ -37,4 +37,5 @@ jobs:
         uses: Factory-AI/droid-action@v3
         with:
           factory_api_key: ${{ secrets.FACTORY_API_KEY }}
-          review_model: "glm-5.2"
+          review_model: "deepseek-v4-pro"
+          reasoning_effort: "high"
