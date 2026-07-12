@@ -37,5 +37,5 @@ jobs:
         uses: Factory-AI/droid-action@v5
         with:
           factory_api_key: ${{ secrets.FACTORY_API_KEY }}
-          review_model: "gpt-5.6-sol"
+          review_model: "gpt-5.6-terra"
           reasoning_effort: "high"
